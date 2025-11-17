@@ -44,6 +44,28 @@ jobs:
           & $exe install twincat.standard.xae -y
         shell: pwsh
 
+      - name: Test TcAutomationContext
+        continue-on-error: true
+        run: |
+          if (-not (Test-Path '.\test.ps1')) {
+            Write-Host 'test.ps1 not found in repo workspace, skipping context creation.'
+            exit 0
+          }
+
+          . .\test.ps1
+
+          Write-Host 'Attempting to create TcAutomationContext...'
+          try {
+            $ctx = [TcAutomationContext]::new($true, $false)
+            Write-Host "Created TcAutomationContext. CreationTime: $($ctx.CreationTime)"
+            $ctx.Dispose()
+            Write-Host 'TcAutomationContext disposed successfully.'
+          }
+          catch {
+            Write-Host "Failed to create TcAutomationContext: $($_.Exception.Message)"
+          }
+        shell: pwsh
+
       - name: List installed packages
         run: |
           $exe = 'C:\ProgramData\Beckhoff\TcPkg\tcpkg.exe'
