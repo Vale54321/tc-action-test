@@ -1,0 +1,51 @@
+name: Test TwinCAT tcpkg install on GitHub runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-tcpkg:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+
+      - name: Copy installer to working dir
+        run: |
+          New-Item -ItemType Directory -Path C:\tcinstall -Force | Out-Null
+          Copy-Item ".\TwinCAT-Package-Manager-GUI-Setup.exe" "C:\tcinstall\TwinCAT-Package-Manager-GUI-Setup.exe"
+        shell: pwsh
+
+      - name: Install TwinCAT Package Manager silently
+        working-directory: C:\tcinstall
+        run: |
+          Write-Host "Starting TwinCAT Package Manager installer..."
+          Start-Process -FilePath .\TwinCAT-Package-Manager-GUI-Setup.exe `
+            -ArgumentList '/S /v/qn' -Wait
+        shell: pwsh
+
+      - name: Add Beckhoff Stable feed
+        run: |
+          $password = "${{ secrets.TCPKG_FEED_PASSWORD }}"
+          $exe = 'C:\ProgramData\Beckhoff\TcPkg\tcpkg.exe'
+          $password | & $exe source add `
+            -n 'Beckhoff Stable Feed' `
+            -s 'https://public.tcpkg.beckhoff-cloud.com/api/v1/feeds/Stable' `
+            -u 'valentin.heiserer@multivac.de' `
+            --password-stdin
+        shell: pwsh
+
+      - name: Install TwinCAT XAE
+        run: |
+          $exe = 'C:\ProgramData\Beckhoff\TcPkg\tcpkg.exe'
+          & $exe install twincat.standard.xae -y
+        shell: pwsh
+
+      - name: List installed packages
+        run: |
+          $exe = 'C:\ProgramData\Beckhoff\TcPkg\tcpkg.exe'
+          & $exe list
+        shell: pwsh
